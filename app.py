@@ -1,43 +1,44 @@
 import streamlit as st
 import pandas as pd
+import cv2
+import numpy as np
 
-st.title("ওএমআর মূল্যায়ন সিস্টেম - মাস্টার কি ইনপুট")
+# ১. মাস্টার কি ফর্ম (আগের কোড অনুযায়ী)
+if 'master_key' not in st.session_state:
+    st.session_state.master_key = {}
+if 'results' not in st.session_state:
+    st.session_state.results = []
 
-# ১. সঠিক উত্তরগুলো ইনপুট দেওয়ার ব্যবস্থা
-st.subheader("সঠিক উত্তরের তালিকা (যেমন: A,C,D,B,...)")
-answer_input = st.text_area("এখানে ৩০টি প্রশ্নের উত্তর কমা (,) দিয়ে লিখুন:", 
-                           placeholder="A,C,B,D,A,C,B,D,... (মোট ৩০টি)")
+st.title("ওএমআর মূল্যায়ন সিস্টেম")
 
-# উত্তরগুলোকে লিস্টে রূপান্তর করা
-master_answers = [ans.strip().upper() for ans in answer_input.split(',')]
+# মাস্টার কি ইনপুট সেকশন
+with st.expander("মাস্টার কি সেট করুন"):
+    cols = st.columns(3)
+    for i in range(1, 31):
+        st.session_state.master_key[i] = cols[(i-1)%3].selectbox(f"Q{i}", ["A", "B", "C", "D"], key=f"m_{i}")
 
-# ২. মূল্যায়নের অংশ
-if len(master_answers) == 30:
-    st.success("সঠিক উত্তরের তালিকা গৃহীত হয়েছে!")
-    
-    roll_no = st.text_input("ছাত্রের রোল নম্বর:")
-    # ছাত্রের উত্তর ইনপুট (অথবা এখানে আপনার ইমেজ প্রসেসিং কোড বসবে)
-    student_answers_input = st.text_area("ছাত্রের ভরাট করা উত্তরগুলো লিখুন (যেমন: A,B,C,D...):")
-    
-    if st.button("মূল্যায়ন করুন"):
-        student_answers = [ans.strip().upper() for ans in student_answers_input.split(',')]
+# ২. ছাত্রের খাতা মূল্যায়ন সেকশন
+st.divider()
+roll_no = st.text_input("ছাত্রের রোল নম্বর:")
+uploaded_file = st.file_uploader("ছাত্রের ওএমআর শিট আপলোড করুন...", type=["jpg", "png"])
+
+if st.button("মূল্যায়ন ও সেভ করুন"):
+    if uploaded_file and roll_no:
+        # এখানে ইমেজ প্রসেসিং লজিক বসবে
+        # ধরুন প্রসেসিং করে আমরা পেলাম ছাত্রের উত্তরগুলো student_answers (ডিকশনারি)
+        # নমুনা উত্তর:
+        student_answers = {i: 'A' for i in range(1, 31)} 
         
-        # স্কোর ক্যালকুলেশন
-        score = 0
-        for i in range(len(master_answers)):
-            if i < len(student_answers) and student_answers[i] == master_answers[i]:
-                score += 1
+        # নম্বর গণনা
+        score = sum(1 for i in range(1, 31) if student_answers[i] == st.session_state.master_key[i])
         
-        st.write(f"রোল: {roll_no} | প্রাপ্ত নম্বর: {score}/30")
-        
-        # গুগল শিট বা CSV তে পাঠানোর জন্য স্টোর করা (পূর্বের লজিক অনুযায়ী)
-        if 'results' not in st.session_state:
-            st.session_state.results = []
+        # সেভ করা
         st.session_state.results.append({'Roll': roll_no, 'Marks': score})
-else:
-    st.warning(f"দয়া করে মোট ৩০টি উত্তর দিন। বর্তমান ইনপুট সংখ্যা: {len(master_answers)}")
+        st.success(f"রোল {roll_no} এর নম্বর {score} জমা হয়েছে!")
+    else:
+        st.error("রোল এবং ছবি আপলোড করুন")
 
 # রেজাল্ট টেবিল
-if 'results' in st.session_state and st.session_state.results:
-    df = pd.DataFrame(st.session_state.results)
-    st.table(df)
+if st.session_state.results:
+    st.table(pd.DataFrame(st.session_state.results))
+  
