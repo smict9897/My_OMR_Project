@@ -1,44 +1,72 @@
 import streamlit as st
 import pandas as pd
-import cv2
 import numpy as np
+import cv2
 
-# ১. মাস্টার কি ফর্ম (আগের কোড অনুযায়ী)
+# অ্যাপের শিরোনাম
+st.title("অটোমেটেড ওএমআর মূল্যায়ন সিস্টেম")
+
+# ১. সেশন স্টেট ইনিশিয়ালাইজেশন
 if 'master_key' not in st.session_state:
     st.session_state.master_key = {}
 if 'results' not in st.session_state:
     st.session_state.results = []
 
-st.title("ওএমআর মূল্যায়ন সিস্টেম")
-
-# মাস্টার কি ইনপুট সেকশন
-with st.expander("মাস্টার কি সেট করুন"):
-    cols = st.columns(3)
+# ২. মাস্টার কি সেটআপ ফর্ম
+with st.expander("মাস্টার উত্তরপত্র সেট করুন (একবার)"):
+    st.write("প্রতিটি প্রশ্নের সঠিক উত্তর নির্বাচন করুন:")
+    cols = st.columns(4)
+    temp_key = {}
     for i in range(1, 31):
-        st.session_state.master_key[i] = cols[(i-1)%3].selectbox(f"Q{i}", ["A", "B", "C", "D"], key=f"m_{i}")
+        # প্রশ্নের অপশনগুলো ৪টি কলামে সাজানো
+        idx = (i-1) % 4
+        temp_key[i] = cols[idx].selectbox(f"প্রশ্ন {i}", ["ক", "খ", "গ", "ঘ"], key=f"m_{i}")
+    
+    if st.button("সঠিক উত্তর সেভ করুন"):
+        st.session_state.master_key = temp_key
+        st.success("মাস্টার কি সফলভাবে সেভ হয়েছে!")
 
-# ২. ছাত্রের খাতা মূল্যায়ন সেকশন
+# ৩. ছাত্রের ওএমআর শিট মূল্যায়ন
 st.divider()
+st.subheader("ছাত্রের খাতা মূল্যায়ন করুন")
 roll_no = st.text_input("ছাত্রের রোল নম্বর:")
-uploaded_file = st.file_uploader("ছাত্রের ওএমআর শিট আপলোড করুন...", type=["jpg", "png"])
+uploaded_file = st.file_uploader("ওএমআর শিটের ছবি আপলোড করুন", type=["jpg", "png", "jpeg"])
 
-if st.button("মূল্যায়ন ও সেভ করুন"):
-    if uploaded_file and roll_no:
-        # এখানে ইমেজ প্রসেসিং লজিক বসবে
-        # ধরুন প্রসেসিং করে আমরা পেলাম ছাত্রের উত্তরগুলো student_answers (ডিকশনারি)
-        # নমুনা উত্তর:
-        student_answers = {i: 'A' for i in range(1, 31)} 
+def process_omr_image(image_file):
+    """
+    এখানে ইমেজ প্রসেসিং এর মূল লজিক থাকবে। 
+    ছবি থেকে পিক্সেল কাউন্ট করে বৃত্ত ভরাট কি না তা শনাক্ত করা হবে।
+    """
+    # ফাইলটিকে ওপেনসিভি ফরম্যাটে নেওয়া
+    file_bytes = np.asarray(bytearray(image_file.read()), dtype=np.uint8)
+    img = cv2.imdecode(file_bytes, 1)
+    
+    # আপাতত একটি ডামি লজিক (আপনি এখানে ইমেজ প্রসেসিং বসাবেন)
+    # ভবিষ্যতে এখানে বৃত্ত শনাক্তকরণ কোড যুক্ত করতে হবে
+    return {i: 'ক' for i in range(1, 31)} 
+
+if st.button("মূল্যায়ন শুরু করুন"):
+    if not st.session_state.master_key:
+        st.error("দয়া করে আগে মাস্টার কি সেট করুন!")
+    elif uploaded_file and roll_no:
+        # ইমেজ থেকে উত্তর পড়া
+        student_answers = process_omr_image(uploaded_file)
         
-        # নম্বর গণনা
+        # স্কোর গণনা
         score = sum(1 for i in range(1, 31) if student_answers[i] == st.session_state.master_key[i])
         
-        # সেভ করা
+        # রেজাল্ট জমা রাখা
         st.session_state.results.append({'Roll': roll_no, 'Marks': score})
         st.success(f"রোল {roll_no} এর নম্বর {score} জমা হয়েছে!")
     else:
-        st.error("রোল এবং ছবি আপলোড করুন")
+        st.warning("রোল নম্বর এবং ছবি দিন।")
 
-# রেজাল্ট টেবিল
+# ৪. রেজাল্ট টেবিল ও ডাউনলোড
 if st.session_state.results:
-    st.table(pd.DataFrame(st.session_state.results))
-  
+    st.subheader("ফলাফল তালিকা")
+    df = pd.DataFrame(st.session_state.results)
+    st.table(df)
+    
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("ফলাফল ডাউনলোড করুন (CSV)", csv, "results.csv", "text/csv")
+    
