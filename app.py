@@ -12,8 +12,8 @@ if 'master_key' not in st.session_state:
 if 'results' not in st.session_state:
     st.session_state.results = []
 
-# ২. মাস্টার কি সেটআপ ফর্ম
-with st.expander("মাস্টার উত্তরপত্র সেট করুন (একবার)"):
+# ২. মাস্টার কি সেটআপ ফর্ম (ড্রপডাউন)
+with st.expander("মাস্টার উত্তরপত্র সেট করুন"):
     st.write("প্রতিটি প্রশ্নের সঠিক উত্তর নির্বাচন করুন:")
     cols = st.columns(4)
     temp_key = {}
@@ -34,22 +34,18 @@ uploaded_file = st.file_uploader("ওএমআর শিটের ছবি আ�
 
 def process_omr_image(image_file):
     """
-    এখানে ইমেজ প্রসেসিং এর মূল লজিক থাকবে। 
-    ছবি থেকে পিক্সেল কাউন্ট করে বৃত্ত ভরাট কি না তা শনাক্ত করা হবে।
+    ছবি থেকে পিক্সেল কাউন্ট করে উত্তর বের করার ফাংশন।
     """
-    # ফাইলটিকে ওপেনসিভি ফরম্যাটে নেওয়া
     file_bytes = np.asarray(bytearray(image_file.read()), dtype=np.uint8)
-    img = cv2.imdecode(file_bytes, 1)
+    img = cv2.imdecode(file_bytes, 1) # ছবি লোড করা
     
-    # আপাতত একটি ডামি লজিক (আপনি এখানে ইমেজ প্রসেসিং বসাবেন)
-    # ভবিষ্যতে এখানে বৃত্ত শনাক্তকরণ কোড যুক্ত করতে হবে
-    return {i: 'ক' for i in range(1, 31)} 
+    # এখানে ভবিষ্যতে আপনার ইমেজ প্রসেসিং কোড যোগ করবেন
+    return {i: 'ক' for i in range(1, 31)} # ডামি লজিক
 
 if st.button("মূল্যায়ন শুরু করুন"):
     if not st.session_state.master_key:
         st.error("দয়া করে আগে মাস্টার কি সেট করুন!")
     elif uploaded_file and roll_no:
-        # ইমেজ থেকে উত্তর পড়া
         student_answers = process_omr_image(uploaded_file)
         
         # স্কোর গণনা
@@ -69,4 +65,3 @@ if st.session_state.results:
     
     csv = df.to_csv(index=False).encode('utf-8')
     st.download_button("ফলাফল ডাউনলোড করুন (CSV)", csv, "results.csv", "text/csv")
-    
